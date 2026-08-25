@@ -1,23 +1,15 @@
-import { Button, Host } from "@expo/ui";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, TextInput, View } from "react-native";
-
-export default function Index() {
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+export default function HomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Hi all</Text>
-
-      <TextInput placeholder="Email" />
-
-      <Host matchContents>
-        <Button
-          label="Go to About"
-          onPress={() => router.push("/about")}
-        />
-      </Host>
-    </View>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <TouchableOpacity style={styles.fab}>
+        <Text>+</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
@@ -27,7 +19,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
+  fab: {},
   headerTitle: {
     color: "blue",
     fontWeight: "bold",

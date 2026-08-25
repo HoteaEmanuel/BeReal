@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -28,6 +28,7 @@ export default function SignUpScreen() {
     }
     try {
       await signUp(email, password);
+      router.push("/(auth)/onboarding");
     } catch (error) {
       Alert.alert("Error", "Failed to sign up");
     } finally {
@@ -35,9 +36,9 @@ export default function SignUpScreen() {
     }
   };
   const { user } = useAuth();
-  useEffect(() => {
-    router.push("/(auth)/onboarding");
-  }, [user]);
+  // useEffect(() => {
+  //   router.push("/(auth)/onboarding");
+  // }, [user]);
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.content}>

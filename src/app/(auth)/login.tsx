@@ -1,5 +1,9 @@
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -8,6 +12,31 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+    if (password.trim().length < 8) {
+      Alert.alert("Error", "The password needs to have atleast 8 characters");
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await signIn(email, password);
+      router.push("/(tabs)");
+    } catch (error) {
+      Alert.alert("Error", "Failed to login up");
+      console.error(error);
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.content}>
@@ -21,6 +50,8 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoComplete="email"
             style={styles.input}
+            value={email}
+            onChangeText={(e) => setEmail(e)}
           />
           <TextInput
             placeholder="Email"
@@ -29,11 +60,19 @@ export default function LoginScreen() {
             secureTextEntry
             autoComplete="password"
             style={styles.input}
+            value={password}
+            onChangeText={(e) => setPassword(e)}
           />
         </View>
 
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Sign in</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>
+            {isLoading ? (
+              <ActivityIndicator size={"small"} color={"#fff"} />
+            ) : (
+              "Sign in"
+            )}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.linkButton}
@@ -107,3 +146,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+function signIn(email: string, password: string) {
+  throw new Error("Function not implemented.");
+}

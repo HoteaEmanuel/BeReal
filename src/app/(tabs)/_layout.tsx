@@ -1,13 +1,31 @@
-import { Ionicons } from "@expo/vector-icons"
-import { Tabs } from "expo-router"
-const TabsLayout = () => {
-  return (
-    <Tabs>
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color,size, focused}) => <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size}/> }} />
-      <Tabs.Screen name="about" options={{ title: 'About',tabBarIcon: ({ color,size,focused}) => <Ionicons name={focused ? 'information-circle' : 'information-circle-outline'} color={color} size={size}/> }}  />
-      <Tabs.Screen name="profile" options={{ title: 'Profile',tabBarIcon: ({ color,size,focused}) => <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={size}/> }} />
-    </Tabs>
-  )
-}
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 
-export default TabsLayout
+export default function TabsLayout() {
+  return (
+    <NativeTabs>
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "house", selected: "house.fill" }}
+          md={{ default: "home", selected: "home_filled" }}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "person", selected: "person.fill" }}
+          md="person"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="about">
+        <NativeTabs.Trigger.Label>About</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "info.bubble", selected: "info.bubble.fill" }}
+          md="info"
+        />
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+}
