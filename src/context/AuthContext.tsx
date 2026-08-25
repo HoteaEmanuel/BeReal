@@ -20,9 +20,10 @@ type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => void;
-  updateUser: (user: Partial<User>) => void;
+  signOut: () => Promise<void>;
+  updateUser: (user: Partial<User>) => Promise<void>;
   fetchUserProfile: (userId: string) => void;
+  refreshAuthUserProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
 };
 
@@ -30,7 +31,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkSession();
@@ -82,6 +83,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileImage: data.profile_image_url,
         onboardingCompleted: data.onboarding_completed,
       };
+    } catch (error) {
+      console.error("Error in fetching the user profile: ", error);
+    }
+  };
+
+  const refreshAuthUserProfile = async (): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user?.id)
+        .single();
+      if (error) {
+        console.error("Error fetching profile: ", error);
+        return;
+      }
+      if (!data) {
+        console.error("No profile found");
+        return;
+      }
+      const authUser = await supabase.auth.getUser();
+      if (!authUser.data.user) {
+        console.error("No user found");
+        return;
+      }
+
+      setUser({
+        id: data.id,
+        name: data.name,
+        username: data.username,
+        email: authUser.data.user.email || "",
+        profileImage: data.profile_image_url,
+        onboardingCompleted: data.onboarding_completed,
+      });
     } catch (error) {}
   };
   async function signUp(email: string, password: string) {
@@ -105,19 +140,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile) setUser(profile);
     }
   }
-  function signOut() {
+  async function signOut() {
+    await supabase.auth.signOut();
     setUser(null);
   }
 
   async function updateUser(userData: Partial<User>) {
     if (!user) return;
     try {
-      const updateData: Partial<User> = {};
+      const updateData: any = {};
       if (userData.name !== undefined) updateData.name = userData.name;
       if (userData.username !== undefined)
         updateData.username = userData.username;
       if (userData.profileImage !== undefined)
-        updateData.profileImage = userData.profileImage;
+        updateData.profile_image_url = userData.profileImage;
       if (userData.onboardingCompleted !== undefined)
         updateData.onboardingCompleted = userData.onboardingCompleted;
 
@@ -142,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updateUser,
         fetchUserProfile,
+        refreshAuthUserProfile,
       }}
     >
       {children}

@@ -1,37 +1,29 @@
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect } from "react";
+import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootGuard />
+      <RootNavigator />
     </AuthProvider>
   );
 }
 
-function RootGuard() {
-  const router = useRouter();
-  const segments = useSegments();
-  const inAuthGroup = segments[0] === "(auth)";
-  const inTabsGroup = segments[0] === "(tabs)";
+function RootNavigator() {
   const { user, isLoading } = useAuth();
-  useEffect(() => {
-    if (isLoading) {
-      router.replace("/loading");
-      return;
-    }
-    if (!user) {
-      if (!inAuthGroup) router.replace("/(auth)/login");
-    } else {
-      if (!inTabsGroup) router.replace("/(tabs)");
-    }
-  }, [user, segments]);
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="loading" />
+      <Stack.Protected guard={isLoading}>
+        <Stack.Screen name="loading" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!isLoading && !!user}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!isLoading && !user}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
     </Stack>
   );
 }

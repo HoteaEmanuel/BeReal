@@ -16,7 +16,9 @@ export const uploadProfileImage = async (userId: string, imageUri: string) => {
     const { data: urlData } = supabase.storage
       .from("profiles")
       .getPublicUrl(fileName);
-    return urlData.publicUrl;
+
+    console.log("URL DATA: ", urlData);
+    return `${urlData.publicUrl}?updated=${Date.now()}`;
   } catch (error) {
     console.log("Error uploading profile image: ", error);
     throw error;
@@ -26,14 +28,14 @@ export const uploadProfileImage = async (userId: string, imageUri: string) => {
 export const uploadPostImage = async (userId: string, imageUri: string) => {
   try {
     const fileExtension = imageUri.split(".").pop() || "jpg";
-    const fileName = `${userId}/post-image.${fileExtension}`;
+    const fileName = `${userId}/${Date.now()}.${fileExtension}`;
     const file = new File(imageUri);
     const bytes = await file.bytes();
     const { error } = await supabase.storage
       .from("posts")
       .upload(fileName, bytes, {
         contentType: `image/${fileExtension}`,
-        upsert: true,
+        upsert: false,
       });
     if (error) throw error;
     const { data: urlData } = supabase.storage
