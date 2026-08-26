@@ -155,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.profileImage !== undefined)
         updateData.profile_image_url = userData.profileImage;
       if (userData.onboardingCompleted !== undefined)
-        updateData.onboardingCompleted = userData.onboardingCompleted;
+        updateData.onboarding_completed = userData.onboardingCompleted;
 
       const { error } = await supabase
         .from("profiles")

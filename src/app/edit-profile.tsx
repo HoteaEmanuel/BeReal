@@ -15,13 +15,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-export default function SignUpScreen() {
-  const [isLoading, setIsLoading] = useState(false);
+
+export default function EditProfileScreen() {
+  const { user, updateUser, refreshAuthUserProfile } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [fullname, setFullname] = useState("");
-  const [profileImage, setProfileImage] = useState("");
-  const { user, updateUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [fullname, setFullname] = useState(user?.name ?? "");
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [profileImage, setProfileImage] = useState(user?.profileImage ?? "");
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -63,6 +65,7 @@ export default function SignUpScreen() {
       setProfileImage(result.assets[0].uri);
     }
   };
+
   const showImagePicker = () => {
     Alert.alert("Select Profile Image", "Choose an option", [
       { text: "Camera", onPress: () => takePhoto() },
@@ -71,13 +74,17 @@ export default function SignUpScreen() {
     ]);
   };
 
-  const handleComplete = async () => {
-    if (!user) throw new Error("User not authenticated");
-    if (!fullname || !username) {
+  const handleSave = async () => {
+    if (!user) return;
+
+    const trimmedFullname = fullname.trim();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedFullname || !trimmedUsername) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
-    if (fullname.trim().length < 3 || username.trim().length < 3) {
+    if (trimmedFullname.length < 3 || trimmedUsername.length < 3) {
       Alert.alert(
         "Error",
         "Full name and username must have atleast 3 characters",
@@ -87,40 +94,43 @@ export default function SignUpScreen() {
 
     try {
       setIsLoading(true);
-      // Check to see if another user with the same username exists
-      const { data: existingUser } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .neq("id", user.id)
-        .single();
 
-      if (existingUser) {
-        Alert.alert("Error", "An user with same username already exists");
-        return;
-      }
+      if (trimmedUsername !== user.username) {
+        const { data: existingUser } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("username", trimmedUsername)
+          .neq("id", user.id)
+          .single();
 
-      // Upload profile image
-
-      if (profileImage) {
-        try {
-          await uploadProfileImage(user.id, profileImage);
-        } catch (error) {
-          console.log("Error: ", error);
-          Alert.alert("Error", "Failed to upload profile image");
+        if (existingUser) {
+          Alert.alert("Error", "An user with same username already exists");
+          return;
         }
       }
 
-      // Update profile
+      let uploadedImageUrl = profileImage;
+      const imageChanged = profileImage && profileImage !== user.profileImage;
+      if (imageChanged) {
+        try {
+          uploadedImageUrl = await uploadProfileImage(user.id, profileImage);
+        } catch (error) {
+          console.log("Error uploading image: ", error);
+          Alert.alert("Error", "Failed to upload profile image");
+          return;
+        }
+      }
+
       await updateUser({
-        name: fullname,
-        username,
-        profileImage,
-        onboardingCompleted: true,
+        name: trimmedFullname,
+        username: trimmedUsername,
+        profileImage: uploadedImageUrl,
       });
-      return router.replace("/(tabs)");
+      await refreshAuthUserProfile();
+      router.back();
     } catch (error) {
-      Alert.alert("Error", "Failed to complete onboarding");
+      console.error(error);
+      Alert.alert("Error", "Failed to update profile");
     } finally {
       setIsLoading(false);
     }
@@ -130,10 +140,8 @@ export default function SignUpScreen() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Complete Your Profile</Text>
-          <Text style={styles.subtitle}>
-            Add your information to get started
-          </Text>
+          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.subtitle}>Update your information</Text>
         </View>
         <View style={styles.form}>
           <TouchableOpacity
@@ -175,14 +183,26 @@ export default function SignUpScreen() {
             placeholderTextColor={"#999"}
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleComplete}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
             <Text style={styles.buttonText}>
               {isLoading ? (
                 <ActivityIndicator size={24} color={"#fff"} />
               ) : (
-                "Complete Setup"
+                "Save"
               )}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => router.back()}
+            disabled={isLoading}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -280,17 +300,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
   },
-
-  linkButton: {
+  cancelButton: {
+    marginTop: 12,
+    padding: 10,
     alignItems: "center",
+    width: "100%",
   },
-  linkButtonText: {
+  cancelButtonText: {
     color: "#666",
-    fontSize: 14,
-  },
-  linkButtonTextBold: {
-    color: "#000",
+    fontSize: 16,
     fontWeight: "600",
-    alignItems: "center",
   },
 });

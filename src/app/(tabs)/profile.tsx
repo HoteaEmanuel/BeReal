@@ -3,7 +3,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
+  ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,12 +13,16 @@ import {
   View,
 } from "react-native";
 
+import { supabase } from "@/lib/supabase/client";
 import { uploadProfileImage } from "@/lib/supabase/storage";
 import { router } from "expo-router";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Profile() {
   const { user, refreshAuthUserProfile, updateUser, signOut } = useAuth();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {
     Alert.alert("Sign out", "Are you sure you want to sign out?", [
@@ -106,6 +112,25 @@ export default function Profile() {
       { text: "Cancel", style: "cancel" },
     ]);
   };
+
+  async function handleDeleteAccount() {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+
+      await signOut();
+      router.replace("/(auth)/login");
+    } catch (error) {
+      console.log("Error: ", error);
+      Alert.alert("Error", "Failed to delete account");
+    } finally {
+      setIsLoading(false);
+      setDeleteModalOpen(false);
+    }
+  }
 
   // const handleComplete = async () => {
   //   if (!user) throw new Error("User not authenticated");
@@ -198,17 +223,26 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/edit-profile")}
+          >
             <Text style={styles.settingLabel}>Edit Profile</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/notifications")}
+          >
             <Text style={styles.settingLabel}>Notifications</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/privacy")}
+          >
             <Text style={styles.settingLabel}>Privacy</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
@@ -217,17 +251,26 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/help-support")}
+          >
             <Text style={styles.settingLabel}>Help & Support</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/terms-of-service")}
+          >
             <Text style={styles.settingLabel}>Terms of Service</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/privacy-policy")}
+          >
             <Text style={styles.settingLabel}>Privacy Policy</Text>
             <Text style={styles.settingValue}>→</Text>
           </TouchableOpacity>
@@ -240,10 +283,53 @@ export default function Profile() {
             <Text>Sign out</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingItem, styles.deleteButton]}>
+          <TouchableOpacity
+            style={[styles.settingItem, styles.deleteButton]}
+            onPress={() => setDeleteModalOpen(true)}
+          >
             <Text style={styles.deleteText}>Delete Account</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal visible={deleteModalOpen} transparent animationType="slide">
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                Are you sure that you want to delete this account?
+              </Text>
+              <Text style={styles.alertText}>This action is irreversible!</Text>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  disabled={isLoading}
+                >
+                  <Text
+                    style={styles.cancelButtonText}
+                    onPress={() => {
+                      setDeleteModalOpen(false);
+                    }}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.deleteButton]}
+                  onPress={handleDeleteAccount}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.deleteButtonText}>
+                    {isLoading ? (
+                      <ActivityIndicator size={"small"} />
+                    ) : (
+                      "Delete"
+                    )}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -353,5 +439,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
     fontWeight: "500",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  alertText: {
+    fontSize: 20,
+    fontWeight: "semibold",
+    color: "red",
+    textAlign: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    gap: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBlock: 20,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f5f5f5",
+  },
+  cancelButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });

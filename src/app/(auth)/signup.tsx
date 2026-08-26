@@ -28,7 +28,7 @@ export default function SignUpScreen() {
     }
     try {
       await signUp(email, password);
-      router.push("/(auth)/onboarding");
+      router.push("/onboarding");
     } catch (error) {
       Alert.alert("Error", "Failed to sign up");
     } finally {
